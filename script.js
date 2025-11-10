@@ -1,159 +1,80 @@
-body {
-  font-family: 'Poppins', sans-serif;
-  background: linear-gradient(135deg, #1a1a2e, #162447);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  margin: 0;
+const chatBox = document.getElementById("chat-box");
+const userInput = document.getElementById("user-input");
+
+function addMessage(msg, className) {
+    const msgDiv = document.createElement("div");
+    msgDiv.className = "chat-msg " + className;
+    msgDiv.innerText = msg;
+    chatBox.appendChild(msgDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-.chat-container {
-  width: 450px;
-  max-width: 95%;
-  height: 650px;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  border-radius: 25px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.1);
-  box-shadow: 0 15px 50px rgba(0,0,0,0.5);
+function showTyping() {
+    const typingDiv = document.createElement("div");
+    typingDiv.className = "chat-msg bot-msg typing";
+    typingDiv.innerHTML = `
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+    `;
+    chatBox.appendChild(typingDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    return typingDiv;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: linear-gradient(to right, #ff416c, #ff4b2b);
-  padding: 20px;
-  font-weight: bold;
-  font-size: 22px;
-  color: #fff;
-  border-bottom-left-radius: 25px;
-  border-bottom-right-radius: 25px;
+async function sendMessage() {
+    const message = userInput.value.trim();
+    if (!message) return;
+    addMessage(message, "user-msg");
+    userInput.value = "";
+    await getChatGPTResponse(message);
 }
 
-.avatar {
-  width: 45px;
-  height: 45px;
-  border-radius: 50%;
-  border: 2px solid #fff;
+async function getChatGPTResponse(message) {
+    const typingDiv = showTyping();
+
+    try {
+        const response = await fetch("https://YOUR_BACKEND_URL/chat", {  // Replace with your backend URL
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: message })
+        });
+
+        const data = await response.json();
+        const botMessage = data.choices[0].message.content.trim();
+
+        typingDiv.remove();
+        addMessage(botMessage, "bot-msg");
+
+        const utterance = new SpeechSynthesisUtterance(botMessage);
+        window.speechSynthesis.speak(utterance);
+
+    } catch (error) {
+        typingDiv.remove();
+        addMessage("Error: Could not connect to ChatGPT.", "bot-msg");
+        console.error(error);
+    }
 }
 
-.chat-box {
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+function startListening() {
+    if (!('webkitSpeechRecognition' in window)) {
+        addMessage("Your browser does not support speech recognition.", "bot-msg");
+        return;
+    }
+    const recognition = new webkitSpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.start();
+    const listeningMsg = addMessage("Listening...", "bot-msg");
+
+    recognition.onresult = (event) => {
+        const command = event.results[0][0].transcript;
+        listeningMsg.remove();
+        addMessage(command, "user-msg");
+        getChatGPTResponse(command);
+    };
 }
 
-.chat-msg {
-  max-width: 70%;
-  padding: 14px 20px;
-  border-radius: 25px;
-  line-height: 1.4;
-  word-wrap: break-word;
-  font-size: 15px;
-  position: relative;
-  animation: fadeIn 0.3s ease;
-}
+userInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") sendMessage();
+});
 
-.user-msg {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  align-self: flex-end;
-  border-bottom-right-radius: 5px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-}
-
-.bot-msg {
-  background: rgba(255, 255, 255, 0.1);
-  color: #e0e0e0;
-  align-self: flex-start;
-  border-bottom-left-radius: 5px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-  backdrop-filter: blur(10px);
-}
-
-.typing {
-  display: flex;
-  gap: 6px;
-}
-
-.typing-dot {
-  width: 8px;
-  height: 8px;
-  background: #fff;
-  border-radius: 50%;
-  animation: bounce 0.6s infinite alternate;
-}
-
-.typing-dot:nth-child(2) { animation-delay: 0.2s; }
-.typing-dot:nth-child(3) { animation-delay: 0.4s; }
-
-.input-area {
-  display: flex;
-  padding: 15px;
-  gap: 10px;
-  border-top: 1px solid rgba(255,255,255,0.2);
-}
-
-input {
-  flex: 1;
-  padding: 12px 18px;
-  border-radius: 25px;
-  border: none;
-  outline: none;
-  font-size: 15px;
-  background: rgba(255,255,255,0.05);
-  color: #fff;
-  backdrop-filter: blur(10px);
-}
-
-input::placeholder {
-  color: #ccc;
-}
-
-button {
-  padding: 12px 20px;
-  border-radius: 25px;
-  border: none;
-  background: linear-gradient(135deg, #ff416c, #ff4b2b);
-  color: #fff;
-  font-weight: bold;
-  cursor: pointer;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-  transition: 0.3s;
-}
-
-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.4);
-}
-
-.chat-box::-webkit-scrollbar {
-  width: 8px;
-}
-
-.chat-box::-webkit-scrollbar-thumb {
-  background: #ff4b2b;
-  border-radius: 20px;
-}
-
-.chat-box::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-@keyframes fadeIn {
-  0% {opacity: 0; transform: translateY(10px);}
-  100% {opacity: 1; transform: translateY(0);}
-}
-
-@keyframes bounce {
-  0% { transform: translateY(0); opacity: 0.3; }
-  100% { transform: translateY(-6px); opacity: 1; }
-}
