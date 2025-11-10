@@ -1,7 +1,6 @@
 const chatBox = document.getElementById("chat-box");
 const userInput = document.getElementById("user-input");
 
-// --- Add a chat message ---
 function addMessage(msg, className) {
     const msgDiv = document.createElement("div");
     msgDiv.className = "chat-msg " + className;
@@ -10,7 +9,6 @@ function addMessage(msg, className) {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// --- Show typing animation ---
 function showTyping() {
     const typingDiv = document.createElement("div");
     typingDiv.className = "chat-msg bot-msg typing";
@@ -21,10 +19,9 @@ function showTyping() {
     `;
     chatBox.appendChild(typingDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
-    return typingDiv; // Return the element so we can remove it later
+    return typingDiv;
 }
 
-// --- Send message ---
 async function sendMessage() {
     const message = userInput.value.trim();
     if (!message) return;
@@ -33,33 +30,22 @@ async function sendMessage() {
     await getChatGPTResponse(message);
 }
 
-// --- Get ChatGPT response ---
 async function getChatGPTResponse(message) {
-    const typingDiv = showTyping(); // show typing dots
+    const typingDiv = showTyping();
 
     try {
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        const response = await fetch("https://YOUR_BACKEND_URL/chat", {  // Replace with your backend URL
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer YOUR_OPENAI_API_KEY" // replace with your key
-            },
-            body: JSON.stringify({
-                model: "gpt-3.5-turbo",
-                messages: [{ role: "user", content: message }],
-                max_tokens: 300
-            })
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: message })
         });
 
         const data = await response.json();
         const botMessage = data.choices[0].message.content.trim();
 
-        // Remove typing animation
         typingDiv.remove();
-
         addMessage(botMessage, "bot-msg");
 
-        // Text-to-Speech
         const utterance = new SpeechSynthesisUtterance(botMessage);
         window.speechSynthesis.speak(utterance);
 
@@ -70,7 +56,6 @@ async function getChatGPTResponse(message) {
     }
 }
 
-// --- Voice input ---
 function startListening() {
     if (!('webkitSpeechRecognition' in window)) {
         addMessage("Your browser does not support speech recognition.", "bot-msg");
@@ -89,7 +74,6 @@ function startListening() {
     };
 }
 
-// --- Enter key sends message ---
 userInput.addEventListener("keypress", (e) => {
     if (e.key === "Enter") sendMessage();
 });
