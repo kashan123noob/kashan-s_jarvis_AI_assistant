@@ -1,6 +1,9 @@
 const chatBox = document.getElementById("chat-box");
 const userInput = document.getElementById("user-input");
 
+// Put your OpenAI API key here
+const OPENAI_API_KEY = "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";  
+
 function addMessage(msg, className) {
     const msgDiv = document.createElement("div");
     msgDiv.className = "chat-msg " + className;
@@ -34,10 +37,17 @@ async function getChatGPTResponse(message) {
     const typingDiv = showTyping();
 
     try {
-        const response = await fetch("https://YOUR_BACKEND_URL/chat", {  // Replace with your backend URL
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: message })
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: "gpt-3.5-turbo",
+                messages: [{ role: "user", content: message }],
+                max_tokens: 300
+            })
         });
 
         const data = await response.json();
@@ -46,6 +56,7 @@ async function getChatGPTResponse(message) {
         typingDiv.remove();
         addMessage(botMessage, "bot-msg");
 
+        // Speak the response
         const utterance = new SpeechSynthesisUtterance(botMessage);
         window.speechSynthesis.speak(utterance);
 
@@ -61,6 +72,7 @@ function startListening() {
         addMessage("Your browser does not support speech recognition.", "bot-msg");
         return;
     }
+
     const recognition = new webkitSpeechRecognition();
     recognition.lang = "en-US";
     recognition.start();
